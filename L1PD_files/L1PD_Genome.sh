@@ -12,8 +12,6 @@
 
 # "Constants"
 PROBESFASTA="L1PD_50mers.fasta"
-#REFERENCECSV="/anakena/1000Genome/data/GRCh38DH.csv"
-#SCALEFACTOR=100
 
 # Initialize variables to default values
 edit_distance=20
@@ -46,23 +44,12 @@ if [ -z $prefix ] ; then
 	prefix=${algnBase%%.*}
 fi
 
-# Testing
-echo Testing... L1PD_Genome -f $file -e $edit_distance -t $dist_threshold -p $prefix -m $min_amt_kmers
-
 dir_path=$(dirname $0)
 # If .index file doesn't exist, then index the genome
 if [ ! -f $file.index ] ; then
-	echo "Index file doesn't exist; indexing genome..."
 	mrfast --index $file
 fi
 mrfast --search $file --seq $dir_path/$PROBESFASTA -e $edit_distance -o probes_$prefix.sam
-python3 $dir_path/L1PD.py probes_$prefix.sam $dir_path/$PROBESFASTA -t $dist_threshold -m $min_amt_kmers > $prefix.gff3
-#rm probes_$prefix.sam
 
-# Calculate CNV
-#PCSUB=$(wc -l ${prefix}.gff3 | sed 's/\s.*//')
-#PCREF=$(wc -l $REFERENCECSV | sed 's/\s.*//')
-#CNV=$(echo "($PCSUB - $PCREF)*$SCALEFACTOR/$PCREF" | bc -l) 
-#echo "Subject pattern count: $PCSUB"
-#echo "Reference pattern count: $PCREF"
-#echo "CNV: $CNV"
+# Apply the L1PD algorithm to generate GFF3 and histogram
+$dir_path/L1PD.py probes_$prefix.sam $dir_path/$PROBESFASTA -t $dist_threshold -m $min_amt_kmers > $prefix.gff3

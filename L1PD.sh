@@ -10,46 +10,40 @@
 
 usage() {
 	cat << EOF
-Usage: L1PD.sh (-f file1.fq file2.fq -r ref.fa | -b file.bam -r ref.fa | -g genome.fa)
-               [-t threads] [-p prefix] [-e edit_distance] [-d dist_threshold] [-h]
+Usage:
 
 L1PD.sh must be executed in one of three modes, each specified with a different flag:
-	1) FASTQ: using paired-end reads and a reference genome (FASTA).
+	1) Genome: Using a genome that is provided in FASTA format.
 
-		L1PD.sh -f file1.fq file2.fq -r ref.fa
+		L1PD.sh -g genome.fa [ optional arguments ]
 
 	2) BAM/CRAM: using an alignment file (BAM or CRAM) and a reference (FASTA).
 
-		L1PD.sh -b file.bam -r ref.fa
+		L1PD.sh -b file.bam -r reference.fa [ optional arguments ]
 
-	3) Genome: Using a genome that is provided in FASTA format.
+	3) FASTQ: using paired-end reads and a reference genome (FASTA).
 
-		L1PD.sh -g genome.fa
+		L1PD.sh -f file1.fq file2.fq -r reference.fa [ optional arguments ]
 
-	Note: FASTQ mode will transition to BAM mode, which will transition to Genome mode.
+	BAM/CRAM mode invokes Genome mode, and FASTQ mode invokes BAM/CRAM mode.
 
-Additional arguments:
-	-t  Number of additional threads
-	    [default: 0]
-	-e  Max. edit distance
-	    [default: 20]
-	-d  Distance difference threshold for establishing patterns
-	    [default: 700]
+Optional arguments:
+	-e  Maximum allowed edit distance when mapping probes to
+	    subject genome with mrFAST.
+	    [Default: 20]
+	-d  Difference threshold allowed when comparing expected distance
+	    and actual distance between probes.
+	    [Default: 700]
+	-m  Minimum amount of probes needed to establish a pattern.
+	    [Default: 9]
 	-p  Prefix text to use for all file names generated
-	    [default: Filename prefix of FASTQ/BAM/CRAM file]
+	    [default: Filename prefix of FASTQ/BAM/CRAM/Genome file]
+	-t  Additional number of threads.
+	    [Default: 0]
 
-	-h  Usage
+	-h  Help (shows usage)
 EOF
 }
-	#Note: FASTQ mode will align the input files to the reference, generate a BAM file,
-	      #and proceed to BAM/CRAM mode.
-			#BAM/CRAM mode will re-create the subject genome according to the reference,
-			#and proceed to Genome mode.
-			#Genome mode will execute the L1PD algorithm to detect LINE-1s in the genome.
-		#Two paired-end FASTQ files are provided with the -f flag.
-		#A reference genome in FASTA format must also be provided with the -r flag.
-		#A BAM/CRAM file is provided with the -b flag.
-		#A reference genome in FASTA format must also be provided with the -r flag.
 
 isInteger() {
 	# https://stackoverflow.com/questions/806906/how-do-i-test-if-a-variable-is-a-number-in-bash#3951175
@@ -147,10 +141,6 @@ if [ -z $prefix ] ; then
 	fi
 	prefix=${algnBase%%.*}
 fi
-
-# Testing
-#echo "reference=$reference, prefix=$prefix, threads=$threads, file1=$file1, file2=$file2, ed=$edit_distance, m=$min_amt_kmers, th=$dist_threshold, file=$file"
-#exit 0
 
 ################
 # L1PD scripts #

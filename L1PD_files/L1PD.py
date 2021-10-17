@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """This class aims to find patterns of hits (of our characteristic k-mers)
 that have particular distances between them, providing possible L1s.
 NOTE: This is a modification of find_possible_L1s.py to consider only

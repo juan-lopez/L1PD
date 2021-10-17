@@ -60,36 +60,29 @@ if [ -z $prefix ] ; then
 	algnBase=$(basename $file) # Use quotes around $file to allow spaces
 	prefix=${algnBase%%.*}
 fi
-#prefix=$3
 # If threads argument not received, use 0 (bcftools' default)
-#threads=${4:-0}
 : ${threads:=0}
 
 ## If the file starts with ftp:// then we download it.
 ##if [[ $file = 'ftp://'* ]] ; then
 #if beginswith "ftp://" "$file" ; then
-	#echo "Downloading file with wget..."
 	#wget $file
 	#file=$algnBase
 #fi
 
 # Generate a Binary Variant Call Format (BCF) file
-echo "BCFTOOLS MPILEUP | BCFTOOLS CALL"
 cmd="bcftools mpileup -Ou -f $reference $file "
 cmd="$cmd | bcftools call -mv --threads $threads -Ob -o ${prefix}.bcf"
-time sh -c "$cmd"
+$cmd
 
 # Normalize indels (30s)
-echo "BCFTOOLS NORM"
-time bcftools norm -f $reference ${prefix}.bcf --threads $threads -Ob -o ${prefix}.norm.bcf
+bcftools norm -f $reference ${prefix}.bcf --threads $threads -Ob -o ${prefix}.norm.bcf
 
 # Index the BCF file; necessary to generate the consensus (2s)
-echo "BCFTOOLS INDEX"
-time bcftools index ${prefix}.norm.bcf
+bcftools index ${prefix}.norm.bcf
 
 # Create the consensus (12s)
-echo "BCFTOOLS CONSENSUS"
-time bcftools consensus -f $reference ${prefix}.norm.bcf > ${prefix}.fa
+bcftools consensus -f $reference ${prefix}.norm.bcf > ${prefix}.fa
 
 # Now that the consensus is ready, it can be used to calculate the amount of patterns.
 # See L1PD_Genome.sh
