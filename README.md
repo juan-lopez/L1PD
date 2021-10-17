@@ -62,5 +62,7 @@ L1PD is launched by executing the main shell script, `L1PD.sh`, and the mode is 
    <dt>-e</dt><dd>Maximum allowed edit distance when mapping probes to subject genome with mrFAST. [<em>Default: 20</em>]</dd>
    <dt>-d</dt><dd>Difference threshold allowed when comparing expected distance and actual distance between probes. [<em>Default: 700</em>]</dd>
    <dt>-m</dt><dd>Minimum amount of probes needed to establish a pattern. [<em>Default: 9</em>]</dd>
+   <dt>-p</dt><dd>File name prefix (i.e. without extension) to use for all files generated. [<em>Default: File name prefix of FASTQ/BAM/CRAM/Genome file</em>]</dd>
    <dt>-t</dt><dd>Additional number of threads to be used. [<em>Default: 0</em>]<br>Note that Genome mode ignores this argument, if specified.</dd>
+   <dt>-h</dt><dd>Help (shows usage).</dd>
 </dl>
