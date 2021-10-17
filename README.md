@@ -41,6 +41,9 @@ The pipeline used is similar to the one found at [Samtools - Workflows](https://
 * [BWA](http://bio-bwa.sourceforge.net/)
 
 ## Usage
+
+L1PD is launched by executing the main shell script, `L1PD.sh`, and the mode is selected by specifying the appropriate arguments.
+
 ### Genome mode
 <pre><code>L1PD.sh -g <i>genome.fa</i> [-e <i>edit_distance</i>] [-d <i>diff_threshold</i>] [-m <i>min_amt_probes</i>] [-p <i>prefix</i>] [-h]</code></pre>
 
