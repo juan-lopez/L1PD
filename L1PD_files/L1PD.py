@@ -218,7 +218,7 @@ def draw_histogram(countDict):
 	w = 0.4
 	bar1 = np.arange(len(refHist))
 	bar2 = [i+w for i in bar1]
-	plt.bar(bar1, yVals, w, label="Subject")
+	plt.bar(bar1, yVals, w, label="Target")
 	plt.bar(bar2, yValsRef, w, label="GRCh38DH")
 	# We move the tick positions and use chrm names
 	plt.xticks(bar1+w/2, xVals)
