@@ -1,7 +1,7 @@
 # L1PD (LINE-1 Pattern Detection)
 
 ## Overview
-L1PD is a tool for efficiently detecting human LINE-1s in subject genomes.  The underlying algorithm uses fixed pre-determined probes that were generated using the GRCh38 reference as well as the LINE-1 database [L1Base2](http://l1base.charite.de/l1base.php).
+L1PD is a tool for efficiently detecting LINE-1s and alus in human and animal subject genomes.  The underlying algorithm uses fixed pre-determined probes that were generated using the GRCh38 reference as well as the LINE-1 database [L1Base2](http://l1base.charite.de/l1base.php) for LINE-1s and the retrotransposon database [dbRIP](https://dbrip.brocku.ca).
 
 L1PD may be executed in one of three modes:
 * Genome mode
