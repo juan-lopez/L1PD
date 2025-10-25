@@ -396,7 +396,8 @@ def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, se
 	oldKCount, oldACount = get_count_kmer_algnmnt(kmerPosDict)
 	if Verbose:
 		print(str(oldKCount)+"/"+str(kmer_count),"("+str(100*oldKCount/kmer_count)+"%) k-mers with", oldACount, "alignments",file=sys.stderr)
-
+	
+	ORFsMatched = 0
 	if sequence_type:
 		if oldKCount > 0:
 			# Discard k-mers without alignments inside targeted ORF

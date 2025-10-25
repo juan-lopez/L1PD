@@ -20,34 +20,35 @@ usage() {
 Usage:
 
 Arguments:
-	-k|--kmersize   Size of k-mer sequences to extract.
-	                [Default: 100]
-	-r|--identity   Percentage range of identity.
-	                [Default: 95]
-	-g|--genome     Reference genome in FASTA format, used for mapping the k-mers.
-	-m|--metadata   Metadata in CSV format of full-length intact L1s (FLI-L1).
-	-i|--input      Input file with original sequences
 	-A|--aligned	Named of the file containing the aligned sequences
 	-a|--aligner    Aligner software to be used.  Options are: clustalo, muscle, mafft, tcoffee
 	                NOTE: The program must be installed and available in your system.
 	                [Default: clustalo]
-	-o|--output     Output file containing probes.
-	                [Default: probes.fasta]
 	-c|--component  LINE1 component for which probes are being generated (ORF1 or ORF2).
 	                Will be used as prefix for k-mer names and as probe filtering criterion.
 	                [Default: ORF1]
-	-p|--merge_pct  Percentage of mismatches allowed between two k-mers in order to merge them
-	                into a larger k-mer.
+	-g|--genome     Reference genome in FASTA format, used for mapping the k-mers.
+	-h|--help       Help (shows usage)
+	-i|--input      Input file with original sequences
 	-j|--join_kmers Final k-mer size to attain after joining k-mers.
 	                Consecutive k-mers will be joined when the percentage of mismatches between them
-						 does not exceed --merge_pct argument.
-	-v|--verbose    Adds verbosity and outputs all result details.
-	                [Default: non-verbose; outputs just the probes]
-	-s|--skip_aln   Skip alignment; to be used when input file is already aligned.
+					does not exceed --merge_pct argument.
+	-k|--kmersize   Size of k-mer sequences to extract.
+	                [Default: 100]
+	-m|--metadata   Metadata in CSV format of full-length intact L1s (FLI-L1).
+	-o|--output     Output file containing probes.
+	                [Default: probes.fasta]
+	-p|--merge_pct  Percentage of mismatches allowed between two k-mers in order to merge them
+	                into a larger k-mer.
 	-q|--sequence	Sequence type, currently supporting Line1 and Alu
 			[Default: Line1]
-	-h|--help       Help (shows usage)
-
+	-r|--identity   Percentage range of identity.
+	                [Default: 95]
+	-S|--skip_aln   Skip alignment; to be used when input file is already aligned.
+	-s|--skip_par	Skip parsing of Alu sequences (provide input sequences and metadata instead).
+	-v|--verbose    Adds verbosity and outputs all result details.
+	                [Default: non-verbose; outputs just the probes]
+	-t|--threads 	Number of threads used by aligner software.
 EOF
 }
 
@@ -63,17 +64,18 @@ isInteger() {
 #############################
 # Initialize default values #
 #############################
-kmer_size=100
-identity_range=95
-output_file="probes.fasta"
-component="ORF1"
 aligned_file=""
 aligner="clustalo"
-threads=1
-skip_aln=false
-seq_type="Line1"
-merge_pct=0
+component="ORF1"
+identity_range=95
 join_kmers=0
+kmer_size=100
+merge_pct=0
+output_file="probes.fasta"
+skip_aln=false
+skip_par=false
+seq_type="Line1"
+threads=1
 
 #####################
 # Process arguments #
@@ -81,69 +83,73 @@ join_kmers=0
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
-		-k|--kmersize)
-			kmer_size="$2"
-			shift 2
-			;;
-		-r|--identity)
-			identity_range="$2"
-			shift 2
-			;;
-		-g|--genome)
-			ref_genome="$2"
-			shift 2
-			;;
-		-m|--metadata)
-			metadata="$2"
-			shift 2
-			;;
-		-i|--input)
-			input_file="$2"
-			shift 2
-			;;
 		-A|--aligned)
 			aligned_file="$2"
-			shift 2
-			;;
-		-o|--output)
-			output_file="$2"
-			shift 2
-			;;
-		-c|--component)
-			component="$2"
 			shift 2
 			;;
 		-a|--aligner)
 			aligner="$2"
 			shift 2
 			;;
-		-p|--merge_pct)
-			merge_pct="$2"
+		-c|--component)
+			component="$2"
+			shift 2
+			;;
+		-g|--genome)
+			ref_genome="$2"
+			shift 2
+			;;
+		-h|--help)
+			usage
+			exit 0
+			;;
+		-i|--input)
+			input_file="$2"
 			shift 2
 			;;
 		-j|--join_kmers)
 			join_kmers="$2"
 			shift 2
 			;;
-		-v|--verbose)
-			verbose="-v"
+		-k|--kmersize)
+			kmer_size="$2"
+			shift 2
+			;;
+		-m|--metadata)
+			metadata="$2"
+			shift 2
+			;;
+		-o|--output)
+			output_file="$2"
+			shift 2
+			;;
+		-p|--merge_pct)
+			merge_pct="$2"
+			shift 2
+			;;
+        -q|--sequence)
+			seq_type="$2"
+			shift 2
+			;;
+		-r|--identity)
+			identity_range="$2"
+			shift 2
+			;;
+		-S|--skip_aln)
+			skip_aln=true
+			shift 1
+			;;
+		-s|--skip_par)
+			skip_par=true
 			shift 1
 			;;
 		-t|--threads)
 			threads="$2"
 			shift 2
 			;;
-		-s|--skip_aln)
-			skip_aln=true
+		-v|--verbose)
+			verbose="-v"
 			shift 1
-			;;
-        	-q|--sequence)
-			seq_type="$2"
-			shift 2
-			;;
-		-h|--help)
-			usage
-			exit 0
 			;;
 		*)
 			echo "Invalid option: $1"
@@ -220,8 +226,7 @@ fi
 
 # Filter sequences so we are only left with Alu's
 # Also performs clustering of similar sequences
-if [ "$seq_type" = "Alu" ] && [ ! -f "alu_sequences.fasta" ] ; then
-	metadata="alu-metadata.csv"
+if [ "$seq_type" = "Alu" ] && [ ! "$skip_par" ] ; then
 	$dir_path/clustering/parse_alu_sequences_cluster.py -i ${input_file} -o "alu_sequences.fasta" -m ${metadata}
 	input_file="alu_sequences.fasta"
 fi
@@ -276,7 +281,7 @@ if [ $rc -ne 0 ] ; then
 fi
 
 if [ "$seq_type" = "Line1" ] ; then
-	$dir_path/kmer_probes.py "sam/${component}_${kmer_size}mers.sam" "${component}_${kmer_size}mers.fasta" "$input_file" "$metadata" "$component" $verbose -q 1 > "$output_file"
+	$dir_path/kmer_probes.py "sam/${component}_${kmer_size}mers.sam" "${component}_${kmer_size}mers.fasta" "$aligned_file" "$metadata" "$component" $verbose -q 1 > "$output_file"
 	# Create a directory to store our orf12 probes do nothing if it already exists
 	mkdir -p orf12_probes
 	# If this is the orf1 iteration empty the orf12 probe file to ensure a clean output before appending
