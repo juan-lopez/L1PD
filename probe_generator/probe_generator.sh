@@ -181,9 +181,8 @@ if ! isInteger $merge_pct || [ $merge_pct -lt 0 ] ||
 	exit 1
 fi
 
-if [ "$input_file" = "" ] && [ seq_type = "Line1" ] ; then
-	echo "ERROR: Input file with sequences to be aligned not provided!"
-	exit 1
+if [ "$skip_aln" = true ] ; then
+	aligned_file=$input_file
 fi
 
 if [ "$ref_genome" = "" ] ; then
@@ -226,15 +225,13 @@ fi
 
 # Filter sequences so we are only left with Alu's
 # Also performs clustering of similar sequences
-if [ "$seq_type" = "Alu" ] && [ ! "$skip_par" ] ; then
+if [ "$seq_type" = "Alu" ] && [ "$skip_par" = false ] ; then
 	$dir_path/clustering/parse_alu_sequences_cluster.py -i ${input_file} -o "alu_sequences.fasta" -m ${metadata}
 	input_file="alu_sequences.fasta"
 fi
 
 # Align the sequences
 if [ "$skip_aln" = false ] ; then
-	echo $dir_path
-	echo $threads
 	$dir_path/align.py -i "$input_file" -o "$aligned_file" -p $aligner -t $threads
 	rc=$?
 	if [ $rc -ne 0 ] ; then
