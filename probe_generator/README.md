@@ -24,18 +24,20 @@ Users can specify what mode they wish to use by calling the respective scripts
 ## Usage:
 
 Probe generation can be launched in one of two ways, by running the probe_generator.sh script depending on the retro-transposon you wish to generate probes for.
+To avoid path issues always provide the absolute path for parameters.
 
 ### LINE1 Mode:
 
 - Other [options](#mode-options)
 
-  - -A --aligned
   - -a --aligner
   - -h --help
   - -j --join_kmers
   - -p --merge_pct
-  - -s --skip_aln
+  - -S --skip_aln
   - -v --verbose
+
+- The tool automatically generates aligned sequences unless `-S | --skip_aln` is specified. Provide an output filename with `-A | --aligned` to save the align file and use `-S | --skip_aln` with `-A | --aligned` to bypass alignment and use that aligned file.
 
 - Example command:
 
@@ -48,7 +50,7 @@ Probe generation can be launched in one of two ways, by running the probe_genera
     -k <KMER-SIZE>
     -r <IDENTITY-PERCENTAGE>
     -A <ALIGNED-FILE>
-    -c Line1
+    -c <ORF>
     -q Line1
 ```
 
