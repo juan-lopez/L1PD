@@ -241,13 +241,13 @@ fi
 
 # Extract all k-mers that meet the specified identity range
 if [ "$seq_type" = "Line1" ] ; then
-	$dir_path/extract_kmers.py "$aligned_file" "${component}_${kmer_size}mers.fasta" -k $kmer_size -r $identity_range -c $component -p $merge_pct -j $join_kmers -q 1
+	$dir_path/extract_kmers.py --inFASTA "$aligned_file" --outFASTA "${component}_${kmer_size}mers.fasta" -k $kmer_size -r $identity_range -c $component -p $merge_pct -q 1
 	if [ ! -s "${component}_${kmer_size}mers.fasta" ]; then
 		echo "No kmers were found. Try lowering the identity or the k-mer size."
 		exit 1
 	fi
 else
-	$dir_path/extract_kmers.py "$aligned_file" alu_${kmer_size}mers.fasta -k $kmer_size -r $identity_range -c $component -q 0
+	$dir_path/extract_kmers.py --inFASTA "$aligned_file" --outFASTA alu_${kmer_size}mers.fasta -k $kmer_size -r $identity_range -c $component -q 0
 	if [ ! -s "alu_${kmer_size}mers.fasta" ]; then
 		echo "No kmers were found. Try lowering the identity or the k-mer size."
 		exit 1

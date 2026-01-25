@@ -12,6 +12,7 @@ import sys
 
 # Import shared L1Base2 module
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'L1PD_files'))
+from merge.algorithm import kmer_frequency, split_kmers, heap_merge_kmers
 import l1base2
 
 from Bio import SeqIO
@@ -22,6 +23,7 @@ threshold = None # Script argument; Should use same threshold when filtering
 chromosome = None
 DEBUG = False
 count = 1
+KMER_FREQ_STEP = 50
 
 
 def load_file_data(SAMFileName):
@@ -158,7 +160,7 @@ def pos_inside_ORF(pos, L1Num, Prefix):
 #	return False
 
 
-def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix, Verbose, CSVFile, Merge, sequence_type):
+def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix, Verbose, CSVFile, Merge, is_line_1, max_ambiguity_treshold):
 	kPosDict["All"] = dict() # Used to store total amount of pos for all chrm
 	tupList = list()
 	append = tupList.append # Local variable; hopefully more efficient
@@ -170,10 +172,10 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 		if Verbose:
 			print("Chromosome", chrm,file=sys.stderr)
 
-		if chrm in ORFsMatched or not sequence_type:
+		if chrm in ORFsMatched or not is_line_1:
 			tupList.clear()
 			for kmer in kPosDict[chrm]:
-				if sequence_type:
+				if is_line_1:
 					append( (len(kPosDict[chrm][kmer]), kmer, ORFsMatched[chrm][kmer]) ) 
 				
 				else:
@@ -203,7 +205,7 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 	rd = SeqIO.to_dict(SeqIO.parse(KmerFile,"fasta"))
 	tupList = list()
 
-	if sequence_type:
+	if is_line_1:
 		for kmer in kPosDict["All"]:
 			# Try to find this k-mer in one of the ORFs
 			kmerPosInORF = -1
@@ -229,28 +231,8 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 					tupList.append( (kPosDict["All"][kmer], kmer, kmerPos) )
 		tupList.sort(reverse=True, key=lambda x: (x[0], -x[2]))
 	
-	
 	if Merge:
-		# Merge overlapping kmers
-		mergetuplist = merge_overlap(tupList, k)
-		print("Overlapping probes generated:", file=sys.stderr)
-		print(*mergetuplist,sep='\n', file=sys.stderr)
-		freq = {}
-		# Generate frequency table for generated overlapping probes
-		for tup in mergetuplist:
-			if tup[4] in freq:
-				freq[tup[4]] += 1
-
-			else:
-				freq[tup[4]] = 1
-
-		print("Frequency table: ", file=sys.stderr)
-		for element in freq:
-			print(element,":",freq[element], file=sys.stderr)
-		
-	if Verbose:
-		print(*tupList, sep='\n',file=sys.stderr)
-		print("\nFinal list of non-overlapping k-mers found in Fixed file", file=sys.stderr)
+		merged_kmers = heap_merge(tupList, k, max_ambiguity_treshold)
 	
 	finalTupList = list() # Ensure only non-overlapping k-mers are used
 	for tup in tupList:
@@ -265,7 +247,7 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 					conflict = True
 					break
 			if not conflict:
-				if sequence_type:
+				if is_line_1:
 					tup = tup[1:] # Omit the L1 count
 				finalTupList.append(tup) 
 	if Verbose:
@@ -315,56 +297,115 @@ def get_count_kmer_algnmnt(kDict):
 			alignmentCount += len(kDict[chrm][kmer])
 	return (len(kmerSet), alignmentCount)
 
-def merge_overlap(overlapping_list,k):
-	"""Merges the overlapping bases to create a larger probe
-	
-	Parameters:
-		overlapping_list - list of tuples containing all the overlapping k-mers
-		k - Initial k-mer count of overlapping kmers
 
-	Return:
-		list of tuples with probes generated from overlapping k-mers
-	"""
-	# Sort list based on pos to make data processing easier
-	overlapping_list_sorted = sorted(overlapping_list, key=lambda x: x[3])
+def merge_overlap(tupList, k):
+    """
+    Merge ONLY kmers that overlap (no gaps allowed).
+    
+    Parameters:
+        tupList: List of tuples (L1Count, hits, kmer_name, position)
+        k: Original k-mer size (e.g., 50)
+    
+    Returns:
+        List of tuples (start_position, merged_length) for merged regions
+    """
+    if not tupList:
+        return []
+    
+    # Sort by position (4th element of tuple)
+    tupList.sort(key=lambda x: x[3])
+    
+    merged = []
+    current_start = tupList[0][3]
+    current_end = current_start + k  # Each kmer is length k
+    
+    for i in range(1, len(tupList)):
+        next_pos = tupList[i][3]
+        next_end = next_pos + k
+        
+        # Check if there's ANY overlap (next kmer starts before current ends)
+        # Overlap exists if: next_pos < current_end
+        # (Use <= if you want to merge adjacent kmers with 0 gap)
+        if next_pos <= current_end:
+            # They overlap! Extend current region
+            current_end = max(current_end, next_end)
+        else:
+            # No overlap - save current merged region
+            merged_length = current_end - current_start
+            if merged_length >= k:  # Keep only if at least original k size
+                merged.append((current_start, merged_length))
+            
+            # Start new region
+            current_start = next_pos
+            current_end = next_end
+    
+    # Don't forget the last region!
+    final_length = current_end - current_start
+    if final_length >= k:
+        merged.append((current_start, final_length))
+    
+    return merged
 
-	# Append initial k_mer count to all overlapping probes
-    	# Create a new list with modified tuples since tuples are immutbale
-	overlapping_list_k = [tup + (k,) for tup in overlapping_list_sorted]
 
-	prev_tup = overlapping_list_k[0]
-	result = list()
-	pos = 1
-    	# Check all tuples that contain overlapping k-mers
-	for tup in overlapping_list_k[1:]:
-		start1 = prev_tup[3]
-		end1 = prev_tup[3] + prev_tup[4] - 1
-		start2 = tup[3]
-		end2 = tup[3] + tup[4] - 1
-		# Check if current tuple is within range to be overlapping
-		# If so, merge our tuple, update range and check next tuple and
-		# set current tuple to 0
-		#if prev_tup[3] + pos == tup[3]: previous if
-		if end1 >= start2 and end1 < end2:
-			prev_tup = list(prev_tup)
-			prev_tup[4] += tup[3] - prev_tup[3] - (prev_tup[4] - k)
-			prev_tup = tuple(prev_tup)
-			tup = (0,0)
-			pos += 1
-		
-		# If no overlapping values are found continue to next tuple
-		else:
-			result.append(prev_tup)
-			prev_tup = tup
-			pos = 1
+def find_gaps_between_merged_kmers(merged_tup_list):
+    """
+    Calculate the gaps (non-kmer regions) between merged kmers.
+    
+    Parameters:
+        merged_tup_list: List of (start_position, length) tuples for merged kmers
+    
+    Returns:
+        List of (gap_start, gap_length) tuples for gaps between kmers
+    """
+    if len(merged_tup_list) < 2:
+        return []  # Need at least 2 kmers to have gaps between them
+    
+    non_kmers = []
+    
+    for i in range(len(merged_tup_list) - 1):
+        start_a, len_a = merged_tup_list[i]
+        start_b, len_b = merged_tup_list[i + 1]
+        
+        # End position of first kmer
+        end_a = start_a + len_a
+        
+        # Gap starts right after end_a, ends right before start_b
+        gap_start = end_a
+        gap_end = start_b
+        
+        # Calculate gap length (only if there's actually a gap)
+        gap_length = gap_end - gap_start
+        
+        if gap_length > 0:
+            non_kmers.append((gap_start, gap_length))
+        # If gap_length <= 0, kmers overlap or touch - no gap
+    
+    return non_kmers
 
-	if prev_tup not in result:
-		result.append(prev_tup)
-	return result
-	
-	
-		
 
+def heap_merge(tupList, k, max_ambiguity_treshold):
+	max_ambiguity_treshold /= 10
+	merged_tup_list = merge_overlap(tupList, k)
+	non_kmers = find_gaps_between_merged_kmers(merged_tup_list)
+	final_kmers = heap_merge_kmers(merged_tup_list, non_kmers, max_ambiguity_treshold)
+     
+	print("------------------------------------------------")
+	print("sliding window merged kmers", len(merged_tup_list))
+	# Filter by k-mer threshold
+	final_kmers = [(start, length) for start, length in final_kmers if length >= k]
+	print("------------------------------------------------")
+	print("Heap merge kmers", len(final_kmers))
+	print("Min kmer length")
+	print(min(final_kmers, key=lambda x: x[1])[1])
+	print("Max kmer length")
+	print(max(final_kmers, key=lambda x: x[1])[1])
+	print("Average length")
+	print(sum([kmer[1] for kmer in final_kmers]) / len(final_kmers))
+	print(kmer_frequency(final_kmers, 50))
+	final_kmers = split_kmers(final_kmers, k, "ORF")
+	print("Heap merge kmers after split") 
+	print(len(final_kmers))
+	return final_kmers
 
 
 # Function below is obsolete, but left for future reference for JSON storage
@@ -380,8 +421,8 @@ def merge_overlap(overlapping_list,k):
 #	print_min_spread(kmerPosDict, ORFsMatched, KmerFile, AlignedORFsFile, kmerSize)
 
 
-def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, sequence_type):
-	if sequence_type:
+def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, is_line_1, max_ambiguity_treshold):
+	if is_line_1:
 		l1base2.load_CSV_file(CSVFile)
 	kmerDict = SeqIO.to_dict(SeqIO.parse(KmerFile,"fasta"))
 	kmer_count = len(kmerDict)
@@ -398,7 +439,7 @@ def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, se
 		print(str(oldKCount)+"/"+str(kmer_count),"("+str(100*oldKCount/kmer_count)+"%) k-mers with", oldACount, "alignments",file=sys.stderr)
 	
 	ORFsMatched = 0
-	if sequence_type:
+	if is_line_1:
 		if oldKCount > 0:
 			# Discard k-mers without alignments inside targeted ORF
 			ORFsMatched = discard_not_in_ORF(kmerPosDict, Prefix, Verbose)
@@ -422,7 +463,7 @@ def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, se
 		#json.dump(kmerPosDict,fp,indent=3)
 	#with open(Prefix+'sMatched.json','w') as fp:
 		#json.dump(ORFsMatched,fp,indent=3)
-	print_min_spread(kmerPosDict, ORFsMatched, KmerFile, AlignedORFsFile, kmerSize, Prefix, Verbose, CSVFile, Merge, sequence_type)
+	print_min_spread(kmerPosDict, ORFsMatched, KmerFile, AlignedORFsFile, kmerSize, Prefix, Verbose, CSVFile, Merge, is_line_1, max_ambiguity_treshold)
 
 
 if __name__ == "__main__":
@@ -435,6 +476,6 @@ if __name__ == "__main__":
 	parser.add_argument('-v', '--verbose', help="Add verbosity so that output contains additional information sent to the standard error output", action='store_true')
 	parser.add_argument('-m', help="Enables the merging of overlapping kmers which are sent to the standard error output",action='store_true')
 	parser.add_argument("-q", type=int, default=1, help="Type of sequence: LINE or Other")
+	parser.add_argument("-p", type=int, default=1, help="Max ambiguity treshold")
 	args = parser.parse_args()
-	main(args.SAM, args.KmerFile, args.AlignedORFsFile, args.L1BaseCSV, args.Prefix, args.verbose, args.m, args.q)
-	#main_new(args.SAM, args.KmerFile, args.AlignedORFsFile, args.L1BaseCSV)
+	main(args.SAM, args.KmerFile, args.AlignedORFsFile, args.L1BaseCSV, args.Prefix, args.verbose, args.m, args.q, args.p)
