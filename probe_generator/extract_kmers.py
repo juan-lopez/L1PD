@@ -19,7 +19,7 @@ def position_consensus(sequences, position):
     This function returns the consensus base from a especific position on a aligned object.
     :param sequences: This is a AlignIO object with the aligned FASTA sequences and IDs
     :param position: This is the position where the consensus
-    :return: The function returns the consensus at the especifide position
+    :return: The function returns the consensus at the specifide position
     """
     if position > sequences.get_alignment_length() - 1:
         return None  # the position is out of the sequences length
@@ -78,8 +78,8 @@ def split_consensus(consensus):
     return pieces
 
 
-# def extract_kmers(inName, outName, k, percentage, identityPct, component, j_size, sequence_type):
-def extract_kmers(inName, outName, k, percentage, identityPct, component, sequence_type):
+# def extract_kmers(inName, outName, k, percentage, identityPct, component, j_size, is_line_1):
+def extract_kmers(inName, outName, k, percentage, identityPct, component, is_line_1):
     align = AlignIO.read(inName, "fasta")
 
     identityPct = identityPct / 100  # Convert from % to float
@@ -109,7 +109,8 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, sequen
                     consensus_kmers.append(
                         (pos - counter, counter))  # If non-base is found, check threshold and append to list
                     counter = 1  # Restart counter for a new sequence of non-bases
-            elif consensus[i - 1] not in ['A', 'G', 'C', 'T']:
+            # elif consensus[i - 1] not in ['A', 'G', 'C', 'T']:
+            else:
                 if consensus[i] not in ['A', 'G', 'C', 'T']:
                     counter += 1  # Only add to counter if current and past chars are non-bases
                 else:
@@ -169,7 +170,7 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, sequen
 
 
     # Split the consensus into "pieces" according to whenever an X was found
-    if sequence_type:
+    if is_line_1: # If LINE 1
         pieces = consensus_mutable.split("X")
     else:
         pieces = split_consensus(consensus_mutable)
@@ -182,7 +183,7 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, sequen
             count = 1
             for i in range(len(pieces)):
                 rel_pos = 0
-                if sequence_type:
+                if is_line_1:
                     piece = pieces[i]
 
                 else:
@@ -227,7 +228,7 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, sequen
                 while lCount < length:  # Try to extract all possible k-mers from this piece
                     pi = piece[lCount:]  # Cut substring of piece starting at lCount
 
-                    relative_pos = count if sequence_type else rel_pos + lCount
+                    relative_pos = count if is_line_1 else rel_pos + lCount
 
                     if len(pi) >= k:  # If length of that subpiece is >= k
                         fhOut.write(prefixString + str(
@@ -238,12 +239,43 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, sequen
 
         else:
             for prefix, start, length in final_kmers:
+                # Variable used to check if k-mer contains an ambigous base (x)
+                # Returns -1 if no x is found or the index of the ambigous base
+                x_index = str(consensus_mutable[start: start + length]).find('X')
+                output_sequence = str(consensus_mutable[start: start + length])
+                # Keep removing all X in the sequence until none are left
+                while x_index >= 0:
+                    print(x_index)
+                    # Retrieve the consesus for that base and update the x in the sequence
+                    base_consensus = position_consensus(align, start + x_index)
+                    print(base_consensus)
+                    output_sequence = output_sequence[:x_index] + base_consensus + output_sequence[x_index + 1:]
+                    print(output_sequence)
+                    x_index = output_sequence.find('X')
                 fhOut.write(">" + prefix + "\n")
-                fhOut.write(str(consensus_mutable[start: start + length]) + "\n")
+                fhOut.write(output_sequence + "\n")
             with open("overlapping_merged_kmers.fa","w") as output:
+                sequences_saved = set()
                 for prefix, start, length in final_overlapping_kmers:
-                    output.write(">" + prefix + "\n")
-                    output.write(str(consensus_mutable[start: start + length]) + "\n")
+                    # Variable used to check if k-mer contains an ambigous base (x)
+                    # Returns -1 if no x is found or the index of the ambigous base
+                    x_index = str(consensus_mutable[start: start + length]).find('X')
+                    output_sequence = str(consensus_mutable[start: start + length])
+                    # Keep removing all X in the sequence until none are left
+                    while x_index >= 0:
+                        print(x_index)
+                        # Retrieve the consesus for that base and update the x in the sequence
+                        base_consensus = position_consensus(align,start + x_index )
+                        print(base_consensus)
+                        output_sequence = output_sequence [:x_index] + base_consensus + output_sequence[x_index + 1:]
+                        print(output_sequence)
+                        x_index = output_sequence.find('X')
+
+
+                    if output_sequence not in sequences_saved:
+                        output.write(">" + prefix + "\n")
+                        output.write(output_sequence + "\n")
+                        sequences_saved.add(output_sequence)
 
 
 
