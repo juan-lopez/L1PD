@@ -85,6 +85,11 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
     identityPct = identityPct / 100  # Convert from % to float
     summary_align = AlignInfo.SummaryInfo(align)
     consensus = summary_align.dumb_consensus(threshold=identityPct, ambiguous='X')
+    print_consensus = summary_align.dumb_consensus(threshold=0)
+
+    with open("all_bases.txt", 'w') as file:
+        print(str(print_consensus), file = file)
+
     consensus_mutable = MutableSeq(str(consensus))
     consensus_kmers = []  # Save a list of (position,size) tuples for k-mers that satisfy a certain threshold
     consensus_non_kmers = []  # Save a list of (position,size) tuples for sequences of non-base characters such as X and N
@@ -245,37 +250,37 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
                 output_sequence = str(consensus_mutable[start: start + length])
                 # Keep removing all X in the sequence until none are left
                 while x_index >= 0:
-                    print(x_index)
+                    # print(x_index)
                     # Retrieve the consesus for that base and update the x in the sequence
                     base_consensus = position_consensus(align, start + x_index)
-                    print(base_consensus)
+                    # print(base_consensus)
                     output_sequence = output_sequence[:x_index] + base_consensus + output_sequence[x_index + 1:]
-                    print(output_sequence)
+                    # print(output_sequence)
                     x_index = output_sequence.find('X')
                 fhOut.write(">" + prefix + "\n")
                 fhOut.write(output_sequence + "\n")
-            with open("overlapping_merged_kmers.fa","w") as output:
-                sequences_saved = set()
-                for prefix, start, length in final_overlapping_kmers:
-                    # Variable used to check if k-mer contains an ambigous base (x)
-                    # Returns -1 if no x is found or the index of the ambigous base
-                    x_index = str(consensus_mutable[start: start + length]).find('X')
-                    output_sequence = str(consensus_mutable[start: start + length])
-                    # Keep removing all X in the sequence until none are left
-                    while x_index >= 0:
-                        print(x_index)
-                        # Retrieve the consesus for that base and update the x in the sequence
-                        base_consensus = position_consensus(align,start + x_index )
-                        print(base_consensus)
-                        output_sequence = output_sequence [:x_index] + base_consensus + output_sequence[x_index + 1:]
-                        print(output_sequence)
-                        x_index = output_sequence.find('X')
+            # with open(outName,"w") as output:
+            sequences_saved = set()
+            for prefix, start, length in final_overlapping_kmers:
+                # Variable used to check if k-mer contains an ambigous base (x)
+                # Returns -1 if no x is found or the index of the ambigous base
+                x_index = str(consensus_mutable[start: start + length]).find('X')
+                output_sequence = str(consensus_mutable[start: start + length])
+                # Keep removing all X in the sequence until none are left
+                while x_index >= 0:
+                    # print(x_index)
+                    # Retrieve the consesus for that base and update the x in the sequence
+                    base_consensus = position_consensus(align,start + x_index )
+                    # print(base_consensus)
+                    output_sequence = output_sequence [:x_index] + base_consensus + output_sequence[x_index + 1:]
+                    # print(output_sequence)
+                    x_index = output_sequence.find('X')
 
 
-                    if output_sequence not in sequences_saved:
-                        output.write(">" + prefix + "\n")
-                        output.write(output_sequence + "\n")
-                        sequences_saved.add(output_sequence)
+                if output_sequence not in sequences_saved:
+                    fhOut.write(">" + prefix + "\n")
+                    fhOut.write(output_sequence + "\n")
+                    sequences_saved.add(output_sequence)
 
 
 
