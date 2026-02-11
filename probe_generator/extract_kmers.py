@@ -85,6 +85,11 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
     identityPct = identityPct / 100  # Convert from % to float
     summary_align = AlignInfo.SummaryInfo(align)
     consensus = summary_align.dumb_consensus(threshold=identityPct, ambiguous='X')
+    print_consensus = summary_align.dumb_consensus(threshold=0)
+
+    with open("all_bases.txt", 'w') as file:
+        print(str(print_consensus), file = file)
+
     consensus_mutable = MutableSeq(str(consensus))
     consensus_kmers = []  # Save a list of (position,size) tuples for k-mers that satisfy a certain threshold
     consensus_non_kmers = []  # Save a list of (position,size) tuples for sequences of non-base characters such as X and N

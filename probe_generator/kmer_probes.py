@@ -12,7 +12,7 @@ import sys
 
 # Import shared L1Base2 module
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'L1PD_files'))
-from merge.algorithm import kmer_frequency, split_kmers, heap_merge_kmers
+from merge.algorithm import kmer_frequency, heap_merge_kmers
 import l1base2
 
 from Bio import SeqIO
@@ -230,45 +230,62 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 				if kmerPos != -1:
 					tupList.append( (kPosDict["All"][kmer], kmer, kmerPos) )
 		tupList.sort(reverse=True, key=lambda x: (x[0], -x[2]))
-	
+	finalTupList = list()
+
 	if Merge:
-		merged_kmers = heap_merge(tupList, k, max_ambiguity_treshold)
+		finalTupList = heap_merge(tupList, k, max_ambiguity_treshold, Prefix)
 	
-	finalTupList = list() # Ensure only non-overlapping k-mers are used
-	for tup in tupList:
-		# Check last component of tuple to see if k-mer was found in Fixed file
-		tupPos = tup[-1]
-		if tupPos > -1: # Component has result of find method
-			# Check if this position doesn't conflict with previous positions
-			conflict = False
-			for finalTup in finalTupList:
-				finalTupPos = finalTup[-1]
-				if finalTupPos <= tupPos + k - 1 and tupPos <= finalTupPos + k - 1: 
-					conflict = True
-					break
-			if not conflict:
-				if is_line_1:
-					tup = tup[1:] # Omit the L1 count
-				finalTupList.append(tup) 
+	# Ensure only non-overlapping k-mers are used
+	else:
+		for tup in tupList:
+			# Check last component of tuple to see if k-mer was found in Fixed file
+			tupPos = tup[-1]
+			if tupPos > -1: # Component has result of find method
+				# Check if this position doesn't conflict with previous positions
+				conflict = False
+				for finalTup in finalTupList:
+					finalTupPos = finalTup[-1]
+					if finalTupPos <= tupPos + k - 1 and tupPos <= finalTupPos + k - 1: 
+						conflict = True
+						break
+				if not conflict:
+					if is_line_1:
+						tup = tup[1:] # Omit the L1 count
+					finalTupList.append(tup) 
 	if Verbose:
 		print(*finalTupList, sep='\n', file=sys.stderr)
 
 	# Finally, print these final k-mers in FASTA format
 	count = 1
-	#print("First 10 items of rd:", list(rd.items())[:10]) TODO DEBUG 
+	# File containing default consensus (identity percentage 0) for merge
+	all_bases = ""
+	with open("all_bases.txt", "r") as file:
+		all_bases = file.readline().strip()
+
+	print(all_bases)
+
 	for tup in sorted(finalTupList,key=lambda x: x[2]):
 		#if tup[1] not in rd: TODO DEBUG
 		#	print("tup:", tup)
 		#	print("The following key is not in rd:", tup[1])
 
+		# extracting the actual bases
+		if Merge:
+			# from the default consensus (identity percentage 0) for merge
+			sequence = all_bases[tup[2]:tup[2] + k]
+
+		else:
+			# from Kmer name when not merging
+			sequence = rd[tup[1]].seq
+
 		if Prefix == "ORF1":
-			print(f'>{Prefix}_{k}mers_{count}',str(tup[2])+'\n'+rd[tup[1]].seq)
+			print(f'>{Prefix}_{k}mers_{count}',str(tup[2])+'\n'+sequence)
 		elif Prefix == "ORF2": # if ORF2, add the Avg ORF1 size and Inter-ORF size
 			orf1_inter_sum_result = sum_orf1_inter(CSVFile)
-			print(f'>{Prefix}_{k}mers_{count}',str(tup[2]+orf1_inter_sum_result)+'\n'+rd[tup[1]].seq)
+			print(f'>{Prefix}_{k}mers_{count}',str(tup[2]+orf1_inter_sum_result)+'\n'+sequence)
 		else:
 			#Output format: >kmer-name kmer position \n kmer
-			print(f'>{Prefix}_{k}mers_{count}',str(tup[2])+'\n'+rd[tup[1]].seq)
+			print(f'>{Prefix}_{k}mers_{count}',str(tup[2])+'\n'+sequence)
 		count += 1
 
 
@@ -382,8 +399,21 @@ def find_gaps_between_merged_kmers(merged_tup_list):
     
     return non_kmers
 
+def split_kmers(tupList, newKmerSize, orf):
+    """
+    Cuts the tup list in to individual k-mers of length: newKmerSize
+    """
+    splitKmers = []
+    for start, length in tupList:
+        while length - newKmerSize > 0:
+            kmerName = f"{orf}_{newKmerSize}mers_"
+            splitKmers.append((newKmerSize, kmerName, start))
+            length -= newKmerSize
+            start += newKmerSize
 
-def heap_merge(tupList, k, max_ambiguity_treshold):
+    return splitKmers
+
+def heap_merge(tupList, k, max_ambiguity_treshold, prefix):
 	max_ambiguity_treshold /= 10
 	merged_tup_list = merge_overlap(tupList, k)
 	non_kmers = find_gaps_between_merged_kmers(merged_tup_list)
@@ -393,6 +423,9 @@ def heap_merge(tupList, k, max_ambiguity_treshold):
 	print("sliding window merged kmers", len(merged_tup_list))
 	# Filter by k-mer threshold
 	final_kmers = [(start, length) for start, length in final_kmers if length >= k]
+	print("Final kmers")
+	print(final_kmers)
+	'''
 	print("------------------------------------------------")
 	print("Heap merge kmers", len(final_kmers))
 	print("Min kmer length")
@@ -402,9 +435,14 @@ def heap_merge(tupList, k, max_ambiguity_treshold):
 	print("Average length")
 	print(sum([kmer[1] for kmer in final_kmers]) / len(final_kmers))
 	print(kmer_frequency(final_kmers, 50))
-	final_kmers = split_kmers(final_kmers, k, "ORF")
+	final_kmers = split_kmers(final_kmers, k, prefix)
 	print("Heap merge kmers after split") 
+	'''
+	final_kmers = split_kmers(final_kmers, k, prefix)
+	print("Final kmers after split")
 	print(len(final_kmers))
+	print(final_kmers)
+
 	return final_kmers
 
 
