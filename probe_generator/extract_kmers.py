@@ -257,8 +257,8 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
                     output_sequence = output_sequence[:x_index] + base_consensus + output_sequence[x_index + 1:]
                     # print(output_sequence)
                     x_index = output_sequence.find('X')
-                fhOut.write(">" + prefix + "\n")
-                fhOut.write(output_sequence + "\n")
+                # fhOut.write(">" + prefix + "\n")
+                # fhOut.write(output_sequence + "\n")
             # with open(outName,"w") as output:
             sequences_saved = set()
             for prefix, start, length in final_overlapping_kmers:
