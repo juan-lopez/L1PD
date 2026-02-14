@@ -262,8 +262,6 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 	with open("all_bases.txt", "r") as file:
 		all_bases = file.readline().strip()
 
-	print(all_bases)
-
 	for tup in sorted(finalTupList,key=lambda x: x[2]):
 		#if tup[1] not in rd: TODO DEBUG
 		#	print("tup:", tup)
@@ -418,31 +416,31 @@ def heap_merge(tupList, k, max_ambiguity_treshold, prefix):
 	merged_tup_list = merge_overlap(tupList, k)
 	non_kmers = find_gaps_between_merged_kmers(merged_tup_list)
 	final_kmers = heap_merge_kmers(merged_tup_list, non_kmers, max_ambiguity_treshold)
-     
-	print("------------------------------------------------")
-	print("sliding window merged kmers", len(merged_tup_list))
+    # Exploratory prints
+	if DEBUG:
+		print("------------------------------------------------")
+		print("sliding window merged kmers", len(merged_tup_list))
+		
 	# Filter by k-mer threshold
 	final_kmers = [(start, length) for start, length in final_kmers if length >= k]
-	print("Final kmers")
-	print(final_kmers)
-	'''
-	print("------------------------------------------------")
-	print("Heap merge kmers", len(final_kmers))
-	print("Min kmer length")
-	print(min(final_kmers, key=lambda x: x[1])[1])
-	print("Max kmer length")
-	print(max(final_kmers, key=lambda x: x[1])[1])
-	print("Average length")
-	print(sum([kmer[1] for kmer in final_kmers]) / len(final_kmers))
-	print(kmer_frequency(final_kmers, 50))
+	if DEBUG:
+		print("Final kmers")
+		print(final_kmers)
+		print("------------------------------------------------")
+		print("Heap merge kmers", len(final_kmers))
+		print("Min kmer length")
+		print(min(final_kmers, key=lambda x: x[1])[1])
+		print("Max kmer length")
+		print(max(final_kmers, key=lambda x: x[1])[1])
+		print("Average length")
+		print(sum([kmer[1] for kmer in final_kmers]) / len(final_kmers))
+		print(kmer_frequency(final_kmers, 50))
 	final_kmers = split_kmers(final_kmers, k, prefix)
-	print("Heap merge kmers after split") 
-	'''
-	final_kmers = split_kmers(final_kmers, k, prefix)
-	print("Final kmers after split")
-	print(len(final_kmers))
-	print(final_kmers)
+	if DEBUG:
+		print("Heap merge kmers after split") 
+		print(final_kmers)
 
+	final_kmers = split_kmers(final_kmers, k, prefix)
 	return final_kmers
 
 
