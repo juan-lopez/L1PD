@@ -123,11 +123,20 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
                     counter = 1  # Restart counter for a new sequence of bases
 
         # Comment out the treshold to retrieve all the bases wip
-        # if counter >= threshold:  # Consider any final sequece left after loop is over
-        if consensus[-1] in ['A', 'G', 'C', 'T']:
-            consensus_kmers.append((pos - counter + 1, counter))
-        if consensus[-1] not in ['A', 'G', 'C', 'T']:
-            consensus_non_kmers.append((pos - counter + 1, counter))
+        if counter >= threshold:  # Consider any final sequece left after loop is over
+            if consensus[-1] in ['A', 'G', 'C', 'T']:
+                consensus_kmers.append((pos - counter + 1, counter))
+            if consensus[-1] not in ['A', 'G', 'C', 'T']:
+                consensus_non_kmers.append((pos - counter + 1, counter))
+
+        print(consensus_kmers)
+        with open('base_regions.txt', 'w') as file:
+            for i in range(len(consensus_kmers)):
+                file.write(str(consensus_kmers[i]) + ' ')
+
+        with open('non_base_regions.txt', 'w') as file:
+            for i in range(len(consensus_non_kmers)):
+                file.write(str(consensus_non_kmers[i]) + ' ')
 
         print("BASE SEQUENCES")
         print("(pos, size)")
@@ -141,7 +150,8 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
         # Merge multiple gaps into contiguous base regions
 
         # New heap merge
-        final_kmers = heap_merge_kmers(consensus_kmers, consensus_non_kmers, percentage)
+        print("Calling heap_merge")
+        final_kmers = heap_merge_kmers(consensus_kmers, percentage)
 
         # Filter by k-mer threshold
         final_kmers = [(start, length) for start, length in final_kmers if length >= k]
@@ -166,11 +176,9 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
 
         print("Overlapping kmers generated")
         for start, length in overlapping_kmer_frequency(final_overlapping_kmers, KMER_FREQ_STEP).items():
-            print(f'{start} : {length}')
+            print(f'{start} : {length-1}')
 
         final_overlapping_kmers = overlap_kmers(final_overlapping_kmers, k, component)
-        # print(final_overlapping_kmers)
-        # print(len(final_overlapping_kmers))
 
 
 
@@ -261,7 +269,9 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
                 # fhOut.write(output_sequence + "\n")
             # with open(outName,"w") as output:
             sequences_saved = set()
-            for prefix, start, length in final_overlapping_kmers:
+            # When evaluating overlapping kmers the final sequence gets duplicated with 49 bases this
+            # logic prevents that from ocurring
+            for prefix, start, length in final_overlapping_kmers[:-1]:
                 # Variable used to check if k-mer contains an ambigous base (x)
                 # Returns -1 if no x is found or the index of the ambigous base
                 x_index = str(consensus_mutable[start: start + length]).find('X')
@@ -281,6 +291,7 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
                     fhOut.write(">" + prefix + "\n")
                     fhOut.write(output_sequence + "\n")
                     sequences_saved.add(output_sequence)
+
 
 
 
