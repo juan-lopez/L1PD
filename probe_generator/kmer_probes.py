@@ -438,8 +438,6 @@ def heap_merge(tupList, k, max_ambiguity_treshold, prefix):
 	if DEBUG:
 		print("Heap merge kmers after split") 
 		print(final_kmers)
-
-	final_kmers = split_kmers(final_kmers, k, prefix)
 	return final_kmers
 
 
