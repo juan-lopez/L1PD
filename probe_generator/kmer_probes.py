@@ -414,8 +414,7 @@ def split_kmers(tupList, newKmerSize, orf):
 def heap_merge(tupList, k, max_ambiguity_treshold, prefix):
 	max_ambiguity_treshold /= 10
 	merged_tup_list = merge_overlap(tupList, k)
-	non_kmers = find_gaps_between_merged_kmers(merged_tup_list)
-	final_kmers = heap_merge_kmers(merged_tup_list, non_kmers, max_ambiguity_treshold)
+	final_kmers = heap_merge_kmers(merged_tup_list, max_ambiguity_treshold)
     # Exploratory prints
 	if DEBUG:
 		print("------------------------------------------------")
