@@ -98,7 +98,7 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
     if percentage != 0:
         percentage = (
                     percentage / 100)  # Percentage of non-base characters we allow in a union of consecutive k-mer sequences split with non-base sequences in between
-        pos = 1  # Counter to keep track of k-mer pos through consensus iteration
+        pos = 0  # Counter to keep track of k-mer pos through consensus iteration
         counter = 1  # Counter to keep track of k-mer size through consensus iteration
 
     if percentage != 0:
@@ -271,7 +271,7 @@ def extract_kmers(inName, outName, k, percentage, identityPct, component, is_lin
             sequences_saved = set()
             # When evaluating overlapping kmers the final sequence gets duplicated with 49 bases this
             # logic prevents that from ocurring
-            for prefix, start, length in final_overlapping_kmers[:-1]:
+            for prefix, start, length in final_overlapping_kmers:
                 # Variable used to check if k-mer contains an ambigous base (x)
                 # Returns -1 if no x is found or the index of the ambigous base
                 x_index = str(consensus_mutable[start: start + length]).find('X')
