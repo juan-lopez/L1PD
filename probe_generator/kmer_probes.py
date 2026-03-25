@@ -160,7 +160,7 @@ def pos_inside_ORF(pos, L1Num, Prefix):
 #	return False
 
 
-def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix, Verbose, CSVFile, Merge, is_line_1, max_ambiguity_treshold):
+def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix, Verbose, CSVFile, is_line_1, max_ambiguity_treshold):
 	kPosDict["All"] = dict() # Used to store total amount of pos for all chrm
 	tupList = list()
 	append = tupList.append # Local variable; hopefully more efficient
@@ -232,7 +232,7 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 		tupList.sort(reverse=True, key=lambda x: (x[0], -x[2]))
 	finalTupList = list()
 
-	if Merge:
+	if max_ambiguity_treshold > 0:
 		finalTupList = heap_merge(tupList, k, max_ambiguity_treshold, Prefix)
 	
 	# Ensure only non-overlapping k-mers are used
@@ -268,7 +268,7 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 		#	print("The following key is not in rd:", tup[1])
 
 		# extracting the actual bases
-		if Merge:
+		if max_ambiguity_treshold > 0:
 			# from the default consensus (identity percentage 0) for merge
 			sequence = all_bases[tup[2]:tup[2] + k]
 
@@ -454,7 +454,7 @@ def heap_merge(tupList, k, max_ambiguity_treshold, prefix):
 #	print_min_spread(kmerPosDict, ORFsMatched, KmerFile, AlignedORFsFile, kmerSize)
 
 
-def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, is_line_1, max_ambiguity_treshold):
+def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, is_line_1, max_ambiguity_treshold):
 	if is_line_1:
 		l1base2.load_CSV_file(CSVFile)
 	kmerDict = SeqIO.to_dict(SeqIO.parse(KmerFile,"fasta"))
@@ -496,7 +496,7 @@ def main(SAMFile, KmerFile, AlignedORFsFile, CSVFile, Prefix, Verbose, Merge, is
 		#json.dump(kmerPosDict,fp,indent=3)
 	#with open(Prefix+'sMatched.json','w') as fp:
 		#json.dump(ORFsMatched,fp,indent=3)
-	print_min_spread(kmerPosDict, ORFsMatched, KmerFile, AlignedORFsFile, kmerSize, Prefix, Verbose, CSVFile, Merge, is_line_1, max_ambiguity_treshold)
+	print_min_spread(kmerPosDict, ORFsMatched, KmerFile, AlignedORFsFile, kmerSize, Prefix, Verbose, CSVFile, is_line_1, max_ambiguity_treshold)
 
 
 if __name__ == "__main__":
@@ -507,8 +507,7 @@ if __name__ == "__main__":
 	parser.add_argument("L1BaseCSV", help="Full path to L1Base CSV file with L1 data")
 	parser.add_argument("Prefix", help="Prefix for the files generated")
 	parser.add_argument('-v', '--verbose', help="Add verbosity so that output contains additional information sent to the standard error output", action='store_true')
-	parser.add_argument('-m', help="Enables the merging of overlapping kmers which are sent to the standard error output",action='store_true')
 	parser.add_argument("-q", type=int, default=1, help="Type of sequence: LINE or Other")
 	parser.add_argument("-p", type=int, default=1, help="Max ambiguity treshold")
 	args = parser.parse_args()
-	main(args.SAM, args.KmerFile, args.AlignedORFsFile, args.L1BaseCSV, args.Prefix, args.verbose, args.m, args.q, args.p)
+	main(args.SAM, args.KmerFile, args.AlignedORFsFile, args.L1BaseCSV, args.Prefix, args.verbose, args.q, args.p)
