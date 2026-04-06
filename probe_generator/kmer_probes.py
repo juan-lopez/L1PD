@@ -185,7 +185,7 @@ def print_min_spread(kPosDict,ORFsMatched, KmerFile, AlignedKmersFile, k, Prefix
 
 			tupList.sort()
 			if len(tupList) == 0: # This should not happen!
-				print("tupList is empty! kPosDict["+chrm+"] =", kPosDict[chrm])
+				print("tupList is empty! kPosDict["+chrm+"] =", kPosDict[chrm], file=sys.stderr)
 
 			if Verbose:
 				print(*tupList, sep='\n', file=sys.stderr)
