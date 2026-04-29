@@ -120,6 +120,9 @@ def build_colranges(base_regions):
     Connect each base region to the next base region.
     Attach the non-base length between them.
     """
+    if not base_regions:
+        return []
+    
     if len(base_regions) < 2:
         base_region = base_regions[0]
         return [ColRange(base_region[0], base_region[1])]
